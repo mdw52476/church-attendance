@@ -2,12 +2,13 @@ import { useMemo, useState } from 'react';
 import { newPerson, useStore } from '../data/store';
 import { DAYS, type AgeGroup, type Category, type EventKind, type EventType, type Family, type FamilyMember, type Person } from '../types';
 import { downloadFile, fmtDateTime, parseCsv, toCsv, todayStr, uid } from '../util';
-import { Empty, Icon, Modal } from '../components/ui';
+import { Empty, Icon, Modal, Segmented } from '../components/ui';
 import { TABLES } from '../data/schema';
 import { DemoBackend } from '../data/demoBackend';
 import { fmtTime } from './CheckIn';
 import { ageGroupFromBirthdate } from '../logic/rules';
 import { LegacyImport } from '../components/LegacyImport';
+import { getTheme, setTheme, type ThemeChoice } from '../theme';
 
 export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: () => void; onSwitchToReal: () => void; sheetUrl: string }) {
   const { db, backend, reload, saveEventType } = useStore();
@@ -15,6 +16,7 @@ export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: (
   const [importing, setImporting] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [legacy, setLegacy] = useState(false);
+  const [theme, setThemeState] = useState<ThemeChoice>(getTheme);
   const types = [...db.EventTypes].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const exportAll = () => {
@@ -128,6 +130,23 @@ export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: (
             Change history
           </button>
         </div>
+      </div>
+
+      <div className="card">
+        <h3>Appearance</h3>
+        <Segmented
+          value={theme}
+          onChange={(v) => {
+            setThemeState(v);
+            setTheme(v);
+          }}
+          options={[
+            { id: 'auto', label: 'Automatic' },
+            { id: 'light', label: 'Light' },
+            { id: 'dark', label: 'Dark' },
+          ]}
+        />
+        <p className="muted small">Automatic follows your phone's light/dark setting. Saved on this device only.</p>
       </div>
 
       <div className="card">

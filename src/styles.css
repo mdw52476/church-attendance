@@ -42,8 +42,9 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Dark colors apply when <html data-theme="dark">; src/theme.ts sets it from the user's choice
+   (Automatic follows the phone's setting). */
+:root[data-theme='dark'] {
     --brand: #8fb4e6;
     --brand-2: #a9c6ee;
     --bg: #111418;
@@ -70,7 +71,6 @@
     --returning-ink: #9dbcf5;
     --chart-bar: #7fa8de;
     color-scheme: dark;
-  }
 }
 
 * {
@@ -180,10 +180,8 @@ input[type='checkbox'] {
   border-color: var(--brand);
   color: #fff;
 }
-@media (prefers-color-scheme: dark) {
-  .btn.primary {
-    color: #0f1722;
-  }
+:root[data-theme='dark'] .btn.primary {
+  color: #0f1722;
 }
 .btn.danger {
   background: var(--danger);
@@ -267,10 +265,8 @@ input[type='checkbox'] {
   background: var(--brand);
   color: #fff;
 }
-@media (prefers-color-scheme: dark) {
-  .topbar {
-    background: #16273d;
-  }
+:root[data-theme='dark'] .topbar {
+  background: #16273d;
 }
 .topbar .brand {
   font-weight: 700;
@@ -382,10 +378,8 @@ main {
 .error-card {
   background: #fdecec !important;
 }
-@media (prefers-color-scheme: dark) {
-  .error-card {
-    background: #3a1c1c !important;
-  }
+:root[data-theme='dark'] .error-card {
+  background: #3a1c1c !important;
 }
 .grid2 {
   display: grid;
@@ -537,10 +531,8 @@ main {
   border-color: var(--brand);
   color: #fff;
 }
-@media (prefers-color-scheme: dark) {
-  .filter-chip.on {
-    color: #0f1722;
-  }
+:root[data-theme='dark'] .filter-chip.on {
+  color: #0f1722;
 }
 .filter-chip.age-adult.on {
   background: var(--adult);
