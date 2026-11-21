@@ -3,7 +3,26 @@ import { StoreProvider, useStore } from './data/store';
 import { SheetsBackend } from './data/sheetsBackend';
 import { DemoBackend } from './data/demoBackend';
 import { extractSheetId, getConfig, loadConfig, saveLocalConfig, type AppConfig } from './data/config';
-import { getEmail, hasValidToken, setClientId, signIn, signOut } from './data/googleAuth';
+import { getEmail, hasValidToken, initAuth, isServerMode, setClientId, signIn, signOut } from './data/googleAuth';
+
+const AUTH_ERRORS: Record<string, string> = {
+  access_denied: 'Sign-in was cancelled.',
+  no_sheets_permission:
+    "Google didn't give this app permission to use your spreadsheets. Try again, and on Google's permission screen tick the box for “See, edit, create, and delete all your Google Sheets spreadsheets”.",
+  expired: 'The sign-in took too long. Please try again.',
+  not_configured: "Sign-in isn't finished being set up on the server yet (missing Google Client secret on Vercel).",
+  no_refresh_token: 'Google did not allow the app to keep you signed in. Please try again.',
+};
+
+/** Reads and removes ?auth_error=… left by the server sign-in. */
+function takeAuthError(): string {
+  const url = new URL(location.href);
+  const code = url.searchParams.get('auth_error');
+  if (!code) return '';
+  url.searchParams.delete('auth_error');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  return AUTH_ERRORS[code] ?? `Google sign-in failed (${code}). Please try again.`;
+}
 import type { Backend } from './data/backend';
 import { CheckIn } from './pages/CheckIn';
 import { People } from './pages/People';
@@ -36,9 +55,15 @@ export default function App() {
   const [signedIn, setSignedIn] = useState(hasValidToken());
 
   useEffect(() => {
-    loadConfig().then((c) => {
-      setConfig(c);
+    Promise.all([loadConfig(), initAuth()]).then(([c, auth]) => {
       setClientId(c.googleClientId);
+      setSignedIn(auth.signedIn);
+      // Coming back from Google's sign-in page: open the real data (unless they chose the demo)
+      if (auth.server && auth.signedIn && localStorage.getItem('ca.mode') !== 'demo') {
+        localStorage.setItem('ca.mode', 'sheets');
+        setModeState('sheets');
+      }
+      setConfig(c);
     });
   }, []);
 
@@ -51,7 +76,8 @@ export default function App() {
   const backend = useMemo<Backend | null>(() => {
     if (!config) return null;
     if (mode === 'demo') return new DemoBackend();
-    if (mode === 'sheets' && config.spreadsheetId && (signedIn || getEmail())) return new SheetsBackend(config.spreadsheetId);
+    // Browser mode can usually refresh silently if we know who they are; server mode knows for sure.
+    if (mode === 'sheets' && config.spreadsheetId && (signedIn || (!isServerMode() && getEmail()))) return new SheetsBackend(config.spreadsheetId);
     return null;
   }, [mode, config, signedIn]);
 
@@ -75,8 +101,8 @@ export default function App() {
     <StoreProvider backend={backend} key={mode + config.spreadsheetId}>
       <Shell
         config={config}
-        onSignOut={() => {
-          if (backend.kind === 'sheets') signOut();
+        onSignOut={async () => {
+          if (backend.kind === 'sheets') await signOut();
           setSignedIn(false);
           setMode('');
         }}
@@ -89,7 +115,7 @@ export default function App() {
 function Welcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: () => void; onSignedIn: (c: AppConfig) => void }) {
   const [clientId, setClientIdField] = useState(config.googleClientId);
   const [sheet, setSheet] = useState(config.spreadsheetId);
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState(takeAuthError);
   const [busy, setBusy] = useState(false);
   const needsSetup = !config.googleClientId || !config.spreadsheetId;
   const [showSetup, setShowSetup] = useState(needsSetup);
@@ -106,6 +132,8 @@ function Welcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: ()
     setClientId(clientId.trim());
     setBusy(true);
     try {
+      // On the live site this leaves for Google's sign-in page and returns signed in
+      localStorage.setItem('ca.mode', 'sheets');
       await signIn(clientId.trim());
       onSignedIn(getConfig());
     } catch (e) {
