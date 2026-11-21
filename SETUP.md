@@ -1,6 +1,6 @@
 # Church Attendance: Setup Guide
 
-This app is a website that runs entirely in the browser. The data lives in a Google Sheet that you own. Only people you share the sheet with (and add as test users, see step 2) can sign in and see the data. The site is hosted free on GitHub Pages, and there's no server to maintain.
+This app is a website that runs entirely in the browser. The data lives in a Google Sheet that you own. Only people you share the sheet with (and add as test users, see step 2) can sign in and see the data. The code lives on GitHub and the site is hosted free on Vercel, which republishes it automatically on every push. There's no server to maintain.
 
 Setup takes about 30 minutes, once.
 
@@ -32,19 +32,19 @@ This is what lets the website ask Google, "may this person use this sheet?"
    - Application type: **Web application**
    - **Authorized JavaScript origins**, add both:
      - `http://localhost:5173` (for testing on your computer)
-     - `https://YOUR-GITHUB-USERNAME.github.io` (your live site, from step 3)
+     - `https://YOUR-PROJECT.vercel.app` (your live site, from step 3)
    - Click **Create** and copy the **Client ID** (it ends in `.apps.googleusercontent.com`).
 
 > When people sign in, Google shows a "Google hasn't verified this app" screen. That's expected for a private app in Testing mode. Click **Continue**. Only the test users you listed can get past it.
 
-## 3. Put the site online (GitHub Pages, free)
+## 3. Put the site online (GitHub + Vercel, free)
 
-1. Create a free account at <https://github.com> if you don't have one.
-2. Create a **new repository** (for example `church-attendance`). It must be **Public** for free Pages. That's fine: the code holds no private data, and the sheet stays private.
-3. Upload this project folder to the repository. The easiest way is to install [GitHub Desktop](https://desktop.github.com/), use **Add local repository** to choose this folder, and then **Publish**. Don't upload `node_modules` or `dist`; the included `.gitignore` already excludes them.
-4. In the repository, open **Settings → Pages** and set **Source: GitHub Actions**.
-5. The included workflow (`.github/workflows/deploy.yml`) builds and publishes the site on every push.
-   After about 2 minutes, your site is at `https://YOUR-GITHUB-USERNAME.github.io/church-attendance/`.
+1. On GitHub, create an **empty private repository** (for example `church-attendance`), and push this folder to it.
+   Don't add a README or .gitignore when creating it. `node_modules` and `dist` are already excluded.
+2. On Vercel: **Add New → Project → Import** that repository. Vercel detects Vite automatically
+   (build command `npm run build`, output folder `dist`).
+3. Every push to `main` republishes the site in about a minute, at `https://YOUR-PROJECT.vercel.app`.
+4. Add that address to the Google Client's **Authorized JavaScript origins** (step 2.5).
 
 ## 4. Connect the app to your sheet
 
