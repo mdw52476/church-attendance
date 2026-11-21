@@ -32,7 +32,7 @@ interface StoreValue {
   saveEventType(t: EventType): Promise<void>;
   saveEvent(ev: ChurchEvent, personIds: string[]): Promise<ChurchEvent>;
   deleteEvent(id: string): Promise<void>;
-  importData(people: Person[], families: Family[], members: FamilyMember[]): Promise<void>;
+  importData(people: Person[], families: Family[], members: FamilyMember[], events?: ChurchEvent[], attendance?: Attendance[], onProgress?: (msg: string) => void): Promise<void>;
   updateFollowUp(p: Person, followUp: Person['followUp'], notes?: string): Promise<void>;
 }
 
@@ -295,17 +295,43 @@ export function StoreProvider({ backend, children }: { backend: Backend; childre
       }).catch(handleErr);
     };
 
-    const importData = async (people: Person[], families: Family[], members: FamilyMember[]) => {
-      setDb((d) => ({ ...d, People: [...d.People, ...people], Families: [...d.Families, ...families], FamilyMembers: [...d.FamilyMembers, ...members] }));
+    const importData = async (
+      people: Person[],
+      families: Family[],
+      members: FamilyMember[],
+      events: ChurchEvent[] = [],
+      attendance: Attendance[] = [],
+      onProgress?: (msg: string) => void,
+    ) => {
+      // large imports go up in chunks so no single request is too big
+      const chunked = async (table: TableName, rows: object[], label: string) => {
+        const size = 800;
+        for (let i = 0; i < rows.length; i += size) {
+          onProgress?.(`Saving ${label}… ${Math.min(i + size, rows.length)} of ${rows.length}`);
+          await upsert(table, rows.slice(i, i + size));
+        }
+      };
       await write(async () => {
-        await upsert('People', people);
-        await upsert('Families', families);
-        await upsert('FamilyMembers', members);
-        await upsert('AuditLog', [audit('import', 'people', '', `${people.length} people, ${families.length} families`)]);
+        await chunked('People', people, 'people');
+        await chunked('Families', families, 'families');
+        await chunked('FamilyMembers', members, 'family members');
+        await chunked('Events', events, 'events');
+        await chunked('Attendance', attendance, 'check-ins');
+        await upsert('AuditLog', [
+          audit('import', 'data', '', `${people.length} people, ${families.length} families, ${events.length} events, ${attendance.length} check-ins`),
+        ]);
       }).catch((e) => {
         handleErr(e);
         throw e;
       });
+      setDb((d) => ({
+        ...d,
+        People: [...d.People, ...people],
+        Families: [...d.Families, ...families],
+        FamilyMembers: [...d.FamilyMembers, ...members],
+        Events: [...d.Events, ...events],
+        Attendance: [...d.Attendance, ...attendance],
+      }));
     };
 
     const updateFollowUp = async (p: Person, followUp: Person['followUp'], notes?: string) => {

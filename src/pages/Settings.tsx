@@ -7,12 +7,14 @@ import { TABLES } from '../data/schema';
 import { DemoBackend } from '../data/demoBackend';
 import { fmtTime } from './CheckIn';
 import { ageGroupFromBirthdate } from '../logic/rules';
+import { LegacyImport } from '../components/LegacyImport';
 
 export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: () => void; onSwitchToReal: () => void; sheetUrl: string }) {
   const { db, backend, reload, saveEventType } = useStore();
   const [editType, setEditType] = useState<EventType | null>(null);
   const [importing, setImporting] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [legacy, setLegacy] = useState(false);
   const types = [...db.EventTypes].sort((a, b) => a.sortOrder - b.sortOrder);
 
   const exportAll = () => {
@@ -90,9 +92,15 @@ export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: (
       <div className="card">
         <h3>People</h3>
         <p className="muted small">Bring in your existing list from a CSV file (in Google Sheets: File → Download → CSV).</p>
-        <button className="btn" onClick={() => setImporting(true)}>
-          <Icon name="upload" size={16} /> Import people from CSV
-        </button>
+        <div className="btn-row">
+          <button className="btn" onClick={() => setImporting(true)}>
+            <Icon name="upload" size={16} /> Import people from CSV
+          </button>
+          <button className="btn" disabled={backend.kind === 'demo'} onClick={() => setLegacy(true)}>
+            <Icon name="upload" size={16} /> Import old attendance sheet
+          </button>
+        </div>
+        {backend.kind === 'demo' && <p className="muted small">Importing an old attendance sheet needs Google sign-in (not available in demo).</p>}
       </div>
 
       <div className="card">
@@ -131,6 +139,7 @@ export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: (
 
       {editType && <EventTypeForm type={editType} onClose={() => setEditType(null)} onSave={saveEventType} />}
       {importing && <ImportCsv onClose={() => setImporting(false)} />}
+      {legacy && <LegacyImport onClose={() => setLegacy(false)} />}
       {showLog && (
         <Modal title="Change history" onClose={() => setShowLog(false)} wide>
           {db.AuditLog.length === 0 ? (
