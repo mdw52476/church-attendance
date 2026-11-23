@@ -46,6 +46,32 @@ This is what lets the website ask Google, "may this person use this sheet?"
 3. Every push to `main` republishes the site in about a minute, at `https://YOUR-PROJECT.vercel.app`.
 4. Add that address to the Google Client's **Authorized JavaScript origins** (step 2.5).
 
+## 3b. Sign-in on the live site: church passcode (recommended)
+
+On the live site, volunteers sign in with **their name + a church passcode** and stay signed in on
+their phone. The app reaches the Google Sheet through its own Google **service account**, so nobody
+needs a Google account and there is no Google "unverified app" screen.
+
+1. In <https://console.cloud.google.com/> (same project), open **IAM & Admin → Service Accounts →
+   + Create service account**. Name it `attendance-app`, click **Create and continue**, skip the
+   optional steps, and click **Done**.
+2. Click the new account, open **Keys → Add key → Create new key → JSON**. A `.json` file downloads.
+   Treat it like a password.
+3. **Share the data sheet** with the service account's email (it ends in `iam.gserviceaccount.com`)
+   as **Editor**. Share any sheet you want to import from with it as **Viewer**.
+4. In **Vercel → church-attendance → Settings → Environment Variables**, add two variables, both
+   marked **Sensitive** for **Production** and **Preview**:
+   - `GOOGLE_SERVICE_ACCOUNT_JSON`: open the downloaded `.json` file in Notepad and paste the
+     whole contents.
+   - `APP_PASSCODE`: the passcode volunteers will type.
+5. Redeploy (Deployments → ⋯ → Redeploy).
+
+To remove someone's access, change `APP_PASSCODE` and redeploy. Everyone is signed out and needs
+the new passcode. The service account is free and never expires.
+
+When you run the app on your own computer (`npm run dev`), there's no server, so it falls back to
+personal Google sign-in with the Client ID below.
+
 ## 4. Connect the app to your sheet
 
 Edit `public/config.json`:

@@ -1,5 +1,5 @@
 import type { Backend } from './backend';
-import { AuthError, clearToken, getEmail, getToken } from './googleAuth';
+import { AuthError, clearToken, getEmail, getServiceAccount, getToken, isServerMode } from './googleAuth';
 import { SCHEMA, TABLES, type RawRow, type TableName } from './schema';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -64,7 +64,9 @@ export class SheetsBackend implements Backend {
       if (/has not been used|is disabled|SERVICE_DISABLED|accessNotConfigured/i.test(google)) {
         msg = "The Google Sheets API isn't turned on for your Google Cloud project yet. In console.cloud.google.com, search “Google Sheets API” and click Enable, wait a minute, then tap Try again.";
       } else if (res.status === 403) {
-        msg = `You (${getEmail() || 'this Google account'}) don't have access to this Google Sheet. Ask the owner to share it with you as Editor. Google said: ${google}`;
+        msg = isServerMode()
+          ? `The app's Google account${getServiceAccount() ? ` (${getServiceAccount()})` : ''} doesn't have access to the data sheet yet. Share the sheet with that address as Editor.`
+          : `You (${getEmail() || 'this Google account'}) don't have access to this Google Sheet. Ask the owner to share it with you as Editor. Google said: ${google}`;
       } else if (res.status === 404) msg = 'Google Sheet not found. Check the sheet link in Setup.';
       throw new SheetsError(msg, res.status);
     }

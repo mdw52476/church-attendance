@@ -79,23 +79,20 @@
           Only people the church has shared that Google Sheet with can view or change the information.
         </p>
 
-        <h2>Google sign-in</h2>
+        <h2>Signing in</h2>
         <p>
-          Volunteers sign in with their Google account. The app asks Google for permission to read and edit Google Sheets
-          so that it can read and save attendance in the church's sheet, and for the volunteer's email address so it can
-          record who made each change. The app only opens the sheets it is set up to use; it does not read, change or
-          delete any other files.
+          Volunteers sign in with their name and a church passcode. The app does not use or see anyone's personal Google
+          account. The name a volunteer enters is recorded with the changes they make, so the church can see who took
+          attendance.
         </p>
         <p>
-          To keep volunteers signed in, the app stores an encrypted Google sign-in token in a secure cookie on the
-          volunteer's own device. It is never shared with anyone else. Signing out in the app's Settings deletes it and
-          revokes the app's access. Access can also be removed at any time at
-          <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.
+          To keep volunteers signed in, the app stores an encrypted sign-in cookie on the volunteer's own device. It
+          contains only their name. Signing out in the app's Settings removes it, and changing the church passcode signs
+          everyone out.
         </p>
         <p>
-          The app's use of information received from Google APIs adheres to the
-          <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
-          including the Limited Use requirements.
+          The app reaches the church's Google Sheet through a Google service account that belongs to the church. It can
+          only open sheets the church has shared with it.
         </p>
 
         <h2>What we never do</h2>

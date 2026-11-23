@@ -9,6 +9,7 @@ import { fmtTime } from './CheckIn';
 import { ageGroupFromBirthdate } from '../logic/rules';
 import { LegacyImport } from '../components/LegacyImport';
 import { getTheme, setTheme, type ThemeChoice } from '../theme';
+import { getServiceAccount, isServerMode } from '../data/googleAuth';
 
 export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: () => void; onSwitchToReal: () => void; sheetUrl: string }) {
   const { db, backend, reload, saveEventType } = useStore();
@@ -114,6 +115,11 @@ export function Settings({ onSignOut, onSwitchToReal, sheetUrl }: { onSignOut: (
               your Google Sheet
             </a>{' '}
             as <b>{backend.userEmail()}</b>.
+          </p>
+        )}
+        {backend.kind === 'sheets' && isServerMode() && getServiceAccount() && (
+          <p className="muted small">
+            The app reaches Google Sheets as <b style={{ wordBreak: 'break-all' }}>{getServiceAccount()}</b>. Share any sheet the app should use (or import from) with that address.
           </p>
         )}
         <p className="muted small">

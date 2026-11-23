@@ -3,26 +3,7 @@ import { StoreProvider, useStore } from './data/store';
 import { SheetsBackend } from './data/sheetsBackend';
 import { DemoBackend } from './data/demoBackend';
 import { extractSheetId, getConfig, loadConfig, saveLocalConfig, type AppConfig } from './data/config';
-import { getEmail, hasValidToken, initAuth, isServerMode, setClientId, signIn, signOut } from './data/googleAuth';
-
-const AUTH_ERRORS: Record<string, string> = {
-  access_denied: 'Sign-in was cancelled.',
-  no_sheets_permission:
-    "Google didn't give this app permission to use your spreadsheets. Try again, and on Google's permission screen tick the box for “See, edit, create, and delete all your Google Sheets spreadsheets”.",
-  expired: 'The sign-in took too long. Please try again.',
-  not_configured: "Sign-in isn't finished being set up on the server yet (missing Google Client secret on Vercel).",
-  no_refresh_token: 'Google did not allow the app to keep you signed in. Please try again.',
-};
-
-/** Reads and removes ?auth_error=… left by the server sign-in. */
-function takeAuthError(): string {
-  const url = new URL(location.href);
-  const code = url.searchParams.get('auth_error');
-  if (!code) return '';
-  url.searchParams.delete('auth_error');
-  history.replaceState(null, '', url.pathname + url.search + url.hash);
-  return AUTH_ERRORS[code] ?? `Google sign-in failed (${code}). Please try again.`;
-}
+import { getEmail, hasValidToken, initAuth, isServerMode, passcodeSignIn, setClientId, signIn, signOut } from './data/googleAuth';
 import type { Backend } from './data/backend';
 import { CheckIn } from './pages/CheckIn';
 import { People } from './pages/People';
@@ -58,7 +39,7 @@ export default function App() {
     Promise.all([loadConfig(), initAuth()]).then(([c, auth]) => {
       setClientId(c.googleClientId);
       setSignedIn(auth.signedIn);
-      // Coming back from Google's sign-in page: open the real data (unless they chose the demo)
+      // Already signed in on this device: open the real data (unless they chose the demo)
       if (auth.server && auth.signedIn && localStorage.getItem('ca.mode') !== 'demo') {
         localStorage.setItem('ca.mode', 'sheets');
         setModeState('sheets');
@@ -112,10 +93,82 @@ export default function App() {
   );
 }
 
-function Welcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: () => void; onSignedIn: (c: AppConfig) => void }) {
+function Welcome(props: { config: AppConfig; onDemo: () => void; onSignedIn: (c: AppConfig) => void }) {
+  return isServerMode() ? <PasscodeWelcome {...props} /> : <GoogleWelcome {...props} />;
+}
+
+function Logo() {
+  return (
+    <div className="logo">
+      <svg viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
+        <rect width="100" height="100" rx="22" fill="var(--brand)" />
+        <path d="M44 18h12v22h22v12H56v30H44V52H22V40h22z" fill="#fff" />
+      </svg>
+    </div>
+  );
+}
+
+/** Live site: sign in with your name + the church passcode. */
+function PasscodeWelcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: () => void; onSignedIn: (c: AppConfig) => void }) {
+  const [name, setName] = useState(() => getEmail());
+  const [code, setCode] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const go = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErr('');
+    if (!name.trim()) return setErr('Please enter your name.');
+    if (!code.trim()) return setErr('Please enter the church passcode.');
+    setBusy(true);
+    try {
+      await passcodeSignIn(name.trim(), code);
+      localStorage.setItem('ca.mode', 'sheets');
+      onSignedIn(getConfig());
+    } catch (x) {
+      setErr((x as Error).message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="welcome">
+      <form className="welcome-card" onSubmit={go}>
+        <Logo />
+        <h1>{config.churchName}</h1>
+        <p className="muted">Attendance check-in and reports</p>
+        <div className="setup">
+          <label className="field">
+            <span>Your name</span>
+            <input value={name} autoComplete="name" autoCapitalize="words" placeholder="e.g. Sarah Smith" onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Church passcode</span>
+            <input value={code} type="password" autoComplete="current-password" onChange={(e) => setCode(e.target.value)} />
+          </label>
+        </div>
+        <button className="btn primary big" type="submit" disabled={busy}>
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+        {err && <p className="error">{err}</p>}
+        <p className="muted small">You'll stay signed in on this device. Your name is recorded with any changes you make.</p>
+        <hr />
+        <button className="btn" type="button" onClick={onDemo}>
+          Try it with sample data
+        </button>
+        <a className="muted small" href="./privacy.html">
+          Privacy policy
+        </a>
+      </form>
+    </div>
+  );
+}
+
+/** Fallback (e.g. running on your own computer): personal Google sign-in. */
+function GoogleWelcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: () => void; onSignedIn: (c: AppConfig) => void }) {
   const [clientId, setClientIdField] = useState(config.googleClientId);
   const [sheet, setSheet] = useState(config.spreadsheetId);
-  const [err, setErr] = useState(takeAuthError);
+  const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const needsSetup = !config.googleClientId || !config.spreadsheetId;
   const [showSetup, setShowSetup] = useState(needsSetup);
@@ -132,7 +185,6 @@ function Welcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: ()
     setClientId(clientId.trim());
     setBusy(true);
     try {
-      // On the live site this leaves for Google's sign-in page and returns signed in
       localStorage.setItem('ca.mode', 'sheets');
       await signIn(clientId.trim());
       onSignedIn(getConfig());
@@ -146,12 +198,7 @@ function Welcome({ config, onDemo, onSignedIn }: { config: AppConfig; onDemo: ()
   return (
     <div className="welcome">
       <div className="welcome-card">
-        <div className="logo">
-          <svg viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
-            <rect width="100" height="100" rx="22" fill="var(--brand)" />
-            <path d="M44 18h12v22h22v12H56v30H44V52H22V40h22z" fill="#fff" />
-          </svg>
-        </div>
+        <Logo />
         <h1>{config.churchName}</h1>
         <p className="muted">Attendance check-in and reports</p>
         <button className="btn primary big" onClick={go} disabled={busy}>
@@ -199,6 +246,8 @@ function Shell({ config, onSignOut, onSwitchToReal }: { config: AppConfig; onSig
   const [reconnecting, setReconnecting] = useState(false);
 
   const reconnect = async () => {
+    // Passcode sign-in ended (signed out elsewhere or passcode changed): back to the sign-in screen
+    if (isServerMode()) return onSignOut();
     setReconnecting(true);
     try {
       await signIn(config.googleClientId);

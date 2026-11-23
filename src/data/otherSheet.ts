@@ -1,5 +1,5 @@
 // Read-only access to another spreadsheet (e.g. the old attendance sheet) with the signed-in user's token.
-import { getToken } from './googleAuth';
+import { getServiceAccount, getToken, isServerMode } from './googleAuth';
 import { extractSheetId } from './config';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -14,7 +14,10 @@ async function get(url: string) {
     } catch {
       /* ignore */
     }
-    if (res.status === 403) msg = `Your Google account can't open that sheet. Make sure it's shared with you. (${msg})`;
+    if (res.status === 403)
+      msg = isServerMode()
+        ? `The app can't open that sheet yet. Share it with ${getServiceAccount() || "the app's Google account"} (Viewer is enough), then try again.`
+        : `Your Google account can't open that sheet. Make sure it's shared with you. (${msg})`;
     if (res.status === 404) msg = "That sheet wasn't found. Check the link.";
     throw new Error(msg);
   }

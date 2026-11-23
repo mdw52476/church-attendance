@@ -1,11 +1,12 @@
-// Google sign-in.
+// Sign-in.
 //
 // Two modes:
-//  • "server" (the live site on Vercel): sign-in goes through /api/auth/*, which keeps a long-lived
-//    refresh token in an encrypted HttpOnly cookie. People stay signed in; the app quietly fetches a
-//    fresh 1-hour access token from /api/auth/token whenever it needs one.
+//  • "server" (the live site on Vercel): volunteers sign in with their name + the church passcode
+//    (/api/auth/login) and stay signed in via an encrypted HttpOnly cookie. The app reaches the
+//    Google Sheet as the church's service account; it fetches a fresh 1-hour access token from
+//    /api/auth/token whenever it needs one.
 //  • "browser" (fallback, e.g. `npm run dev` on your computer, or before the server is configured):
-//    Google Identity Services popup; the access token lasts about an hour.
+//    personal Google sign-in popup; the access token lasts about an hour.
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -74,11 +75,43 @@ async function serverToken(): Promise<string | null> {
   const isJson = (r.headers.get('content-type') || '').includes('application/json');
   if (!isJson || r.status === 404 || r.status === 503) throw new Error('server sign-in unavailable');
   if (r.status === 401) return null;
-  if (!r.ok) throw new AuthError('Could not refresh your Google sign-in.');
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new AuthError(`Couldn't connect to Google Sheets: ${j.message || j.error || r.status}`);
+  }
   const j = await r.json();
   store(j.access_token, j.expires_in);
-  setEmail(j.email);
+  setEmail(j.name);
+  try {
+    localStorage.setItem('ca.account', j.account || '');
+  } catch {
+    /* ignore */
+  }
   return j.access_token;
+}
+
+/** The church's service account email (share sheets with this address). Server mode only. */
+export function getServiceAccount() {
+  try {
+    return localStorage.getItem('ca.account') || '';
+  } catch {
+    return '';
+  }
+}
+
+/** Server mode: sign in with name + church passcode. Stays signed in on this device. */
+export async function passcodeSignIn(name: string, passcode: string): Promise<void> {
+  const r = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, passcode }),
+  });
+  if (r.status === 401) throw new Error("That passcode isn't right.");
+  if (r.status === 400) throw new Error('Please enter your name.');
+  if (!r.ok) throw new Error("Sign-in isn't set up on the server yet.");
+  const t = await serverToken();
+  if (!t) throw new Error('Sign-in did not stick. Make sure cookies are allowed for this site.');
 }
 
 /**
@@ -164,13 +197,9 @@ async function popupSignIn(clientId: string, silent: boolean): Promise<string> {
 
 // ---------- public API ----------
 
-/** Starts sign-in (call from a tap). In server mode this leaves the page for Google and comes back signed in. */
+/** Browser mode: opens the Google sign-in popup (call from a tap). Server mode uses passcodeSignIn. */
 export async function signIn(clientId: string): Promise<string> {
-  if (mode === 'server') {
-    const hint = getEmail();
-    window.location.href = '/api/auth/login' + (hint ? `?hint=${encodeURIComponent(hint)}` : '');
-    return new Promise<string>(() => {}); // the page is navigating away
-  }
+  if (mode === 'server') throw new Error('Use the passcode sign-in');
   return popupSignIn(clientId, false);
 }
 
@@ -217,6 +246,7 @@ export async function signOut() {
   clearToken();
   try {
     localStorage.removeItem(LS_EMAIL);
+    localStorage.removeItem('ca.account');
   } catch {
     /* ignore */
   }
