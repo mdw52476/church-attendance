@@ -34,6 +34,8 @@ interface StoreValue {
   deleteEvent(id: string): Promise<void>;
   importData(people: Person[], families: Family[], members: FamilyMember[], events?: ChurchEvent[], attendance?: Attendance[], onProgress?: (msg: string) => void): Promise<void>;
   updateFollowUp(p: Person, followUp: Person['followUp'], notes?: string): Promise<void>;
+  /** Saves several people in one write (e.g. a whole family's category). */
+  savePeople(list: Person[], note: string): Promise<void>;
 }
 
 const Ctx = createContext<StoreValue | null>(null);
@@ -334,6 +336,21 @@ export function StoreProvider({ backend, children }: { backend: Backend; childre
       }));
     };
 
+    const savePeople = async (list: Person[], note: string) => {
+      if (!list.length) return;
+      const ts = nowIso();
+      const next = list.map((p) => ({ ...p, updatedAt: ts }));
+      const m = new Map(next.map((p) => [p.id, p]));
+      setDb((d) => ({ ...d, People: d.People.map((p) => m.get(p.id) ?? p) }));
+      await write(async () => {
+        await upsert('People', next);
+        await upsert('AuditLog', [audit('edit', 'people', '', note)]);
+      }).catch((e) => {
+        handleErr(e);
+        throw e;
+      });
+    };
+
     const updateFollowUp = async (p: Person, followUp: Person['followUp'], notes?: string) => {
       await savePerson({ ...p, followUp, followUpNotes: notes ?? p.followUpNotes });
     };
@@ -357,6 +374,7 @@ export function StoreProvider({ backend, children }: { backend: Backend; childre
       deleteEvent,
       importData,
       updateFollowUp,
+      savePeople,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [db, backend, loading, saving, error, authExpired, toasts, toast, reload, write, handleErr]);

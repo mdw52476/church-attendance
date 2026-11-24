@@ -768,9 +768,34 @@ ul.compact .row-main {
 .fam-btn {
   color: var(--brand-2);
 }
-.edit-btn {
-  color: var(--muted);
-  width: 36px;
+/* Edit buttons: pencil on phones, pencil + "Edit" on wider screens */
+.row-edit {
+  color: var(--brand-2);
+  flex: none;
+  min-width: 40px;
+  padding: 0 8px;
+  margin-right: 4px;
+}
+.row-edit:hover {
+  background: var(--brand-soft);
+}
+.row-edit .lbl {
+  display: none;
+}
+@media (min-width: 640px) {
+  .row-edit .lbl {
+    display: inline;
+  }
+}
+.fam-card > header .row-edit {
+  margin-right: 0;
+}
+.apply-family {
+  align-items: flex-start;
+  background: var(--brand-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 4px;
 }
 .add-person {
   display: flex;

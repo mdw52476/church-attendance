@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from '../data/store';
-import { AGE_GROUPS, CATEGORIES, SECTIONS, type AgeGroup, type Category, type ChurchEvent, type EventType, type Person } from '../types';
+import { AGE_GROUPS, CATEGORIES, SECTIONS, type AgeGroup, type Category, type ChurchEvent, type EventType, type Family, type Person } from '../types';
 import { displayName, fmtDate, fmtDateTime, matchesSearch, parseDate, sortKey, todayStr, uid } from '../util';
 import { AgeChip, CategoryChip, Empty, FilterChip, Icon, Modal, SearchBox, SectionBadge, Segmented } from '../components/ui';
 import { PersonForm } from '../components/PersonForm';
+import { FamilyForm } from './People';
 
 type View = 'list' | 'families' | 'sections';
 
@@ -136,6 +137,7 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [famPick, setFamPick] = useState<Person | null>(null);
+  const [editingFamily, setEditingFamily] = useState<Family | null>(null);
   const [primaryOnly, setPrimaryOnly] = useState<boolean>(() => prefs.get('famPrimaryOnly', true));
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   useEffect(() => prefs.set('famPrimaryOnly', primaryOnly), [primaryOnly]);
@@ -275,8 +277,9 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
             <Icon name="users" />
           </button>
         )}
-        <button className="icon-btn edit-btn" aria-label="Edit person" onClick={() => setEditing(p)}>
-          <Icon name="edit" size={16} />
+        <button className="btn sm ghost row-edit" aria-label={`Edit ${displayName(p)}`} onClick={() => setEditing(p)}>
+          <Icon name="edit" size={18} />
+          <span className="lbl">Edit</span>
         </button>
       </li>
     );
@@ -316,6 +319,11 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
                   {pa && <span className="muted"> · {pa.firstName}</span>}
                   <span className="muted"> · {mem.filter((p) => checked.has(p.id)).length}/{mem.length}</span>
                 </div>
+                <span className="spacer" />
+                <button className="btn sm ghost row-edit" aria-label={`Edit ${f.name} family`} onClick={() => setEditingFamily(f)}>
+                  <Icon name="edit" size={18} />
+                  <span className="lbl">Edit family</span>
+                </button>
                 <button
                   className={`btn sm ${all ? '' : 'primary'}`}
                   onClick={() => {
@@ -667,7 +675,8 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
           }}
         />
       )}
-      {editing && <PersonForm person={editing} onClose={() => setEditing(null)} />}
+      {editing && <PersonForm person={db.People.find((x) => x.id === editing.id) ?? editing} onClose={() => setEditing(null)} />}
+      {editingFamily && <FamilyForm family={db.Families.find((x) => x.id === editingFamily.id) ?? editingFamily} onClose={() => setEditingFamily(null)} />}
       {famPick && (
         <Modal title="Which family?" onClose={() => setFamPick(null)}>
           <div className="list-buttons">

@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PersonForm({ person, defaults, title, onClose, onSaved }: Props) {
-  const { db, savePerson, saveFamily, deletePerson } = useStore();
+  const { db, savePerson, saveFamily, deletePerson, savePeople, toast } = useStore();
   const isNew = !person;
   const [p, setP] = useState<Person>(() => person ?? newPerson({ category: 'first_time', followUp: 'needed', ...defaults }));
   const [unknownName, setUnknownName] = useState(() => !!person && !person.firstName && !person.lastName && !!person.description);
@@ -46,6 +46,15 @@ export function PersonForm({ person, defaults, title, onClose, onSaved }: Props)
 
   const canSave = unknownName ? p.description.trim() !== '' : p.firstName.trim() !== '' || p.lastName.trim() !== '';
 
+  // Everyone else in this person's families whose category differs — candidates for "apply to whole family"
+  const [applyToFamily, setApplyToFamily] = useState(false);
+  const familyOthers = useMemo(() => {
+    const ids = new Set(db.FamilyMembers.filter((m) => famIds.includes(m.familyId) && m.personId !== p.id).map((m) => m.personId));
+    return db.People.filter((x) => ids.has(x.id));
+  }, [db.FamilyMembers, db.People, famIds, p.id]);
+  const othersToChange = familyOthers.filter((x) => x.category !== p.category);
+  const categoryLabelText = CATEGORIES.find((c) => c.id === p.category)?.label ?? p.category;
+
   const save = async () => {
     if (!canSave) return;
     setBusy(true);
@@ -73,6 +82,13 @@ export function PersonForm({ person, defaults, title, onClose, onSaved }: Props)
         if (!f) continue;
         const members = db.FamilyMembers.filter((m) => m.familyId === fid && m.personId !== saved.id).map((m) => m.personId);
         await saveFamily(f, members);
+      }
+      if (applyToFamily && othersToChange.length) {
+        await savePeople(
+          othersToChange.map((x) => ({ ...x, category: saved.category, categoryManual: true })),
+          `Set ${othersToChange.length} family member(s) of ${displayName(saved)} to ${categoryLabelText}`,
+        );
+        toast(`${othersToChange.length + 1} people set to ${categoryLabelText}`);
       }
       onSaved?.(saved);
       onClose();
@@ -139,6 +155,15 @@ export function PersonForm({ person, defaults, title, onClose, onSaved }: Props)
           <button type="button" className="link" onClick={() => set('categoryManual', false)}>
             Let the app update this automatically
           </button>
+        )}
+        {othersToChange.length > 0 && (
+          <label className="check-line apply-family">
+            <input type="checkbox" checked={applyToFamily} onChange={(e) => setApplyToFamily(e.target.checked)} />
+            <span>
+              Also make the rest of the family <b>{categoryLabelText}</b>
+              <span className="muted small"> ({othersToChange.map((x) => x.firstName || displayName(x)).join(', ')})</span>
+            </span>
+          </label>
         )}
       </div>
 

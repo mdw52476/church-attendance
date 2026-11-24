@@ -36,6 +36,7 @@ function PeopleList() {
   const [secF, setSecF] = useState<string[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [detail, setDetail] = useState<Person | null>(null);
+  const [editing, setEditing] = useState<Person | null>(null);
   const [adding, setAdding] = useState(false);
 
   const list = useMemo(
@@ -121,13 +122,17 @@ function PeopleList() {
                   </span>
                 </span>
                 <SectionBadge section={p.section} />
-                <Icon name="chevron" size={16} />
+              </button>
+              <button className="btn sm ghost row-edit" aria-label={`Edit ${displayName(p)}`} onClick={() => setEditing(p)}>
+                <Icon name="edit" size={18} />
+                <span className="lbl">Edit</span>
               </button>
             </li>
           ))}
         </ul>
       )}
       {detail && <PersonDetail person={db.People.find((x) => x.id === detail.id) ?? detail} onClose={() => setDetail(null)} />}
+      {editing && <PersonForm person={db.People.find((x) => x.id === editing.id) ?? editing} onClose={() => setEditing(null)} />}
       {adding && <PersonForm title="Add person" defaults={{ category: 'regular', followUp: '' }} onClose={() => setAdding(false)} />}
     </>
   );
@@ -323,7 +328,10 @@ function FamilyList() {
                     </span>
                   </span>
                   <span className="count-badge">{mem.length}</span>
-                  <Icon name="chevron" size={16} />
+                </button>
+                <button className="btn sm ghost row-edit" aria-label={`Edit ${f.name} family`} onClick={() => setEdit(f)}>
+                  <Icon name="edit" size={18} />
+                  <span className="lbl">Edit</span>
                 </button>
               </li>
             );
@@ -335,8 +343,9 @@ function FamilyList() {
   );
 }
 
-function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }) {
-  const { db, saveFamily, deleteFamily } = useStore();
+export function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }) {
+  const { db, saveFamily, deleteFamily, savePeople, toast } = useStore();
+  const [setAllCat, setSetAllCat] = useState<Category | ''>('');
   const isNew = !db.Families.some((f) => f.id === family.id);
   const [f, setF] = useState(family);
   const [members, setMembers] = useState<string[]>(() => db.FamilyMembers.filter((m) => m.familyId === family.id).map((m) => m.personId));
@@ -352,6 +361,15 @@ function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }
     if (!name) name = people(members)[0]?.lastName || 'Family';
     const primary = f.primaryAdultId && members.includes(f.primaryAdultId) ? f.primaryAdultId : adults[0]?.id ?? '';
     await saveFamily({ ...f, name, primaryAdultId: primary }, members);
+    if (setAllCat) {
+      const change = people(members).filter((p) => p.category !== setAllCat);
+      const label = CATEGORIES.find((c) => c.id === setAllCat)?.label ?? setAllCat;
+      await savePeople(
+        change.map((p) => ({ ...p, category: setAllCat, categoryManual: true })),
+        `Set the ${name} family (${change.length}) to ${label}`,
+      );
+      if (change.length) toast(`${name} family set to ${label}`);
+    }
     onClose();
   };
 
@@ -397,7 +415,7 @@ function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }
           {people(members).map((p) => (
             <li key={p.id}>
               <span>
-                {displayName(p)} <AgeChip age={p.ageGroup} small />
+                {displayName(p)} <AgeChip age={p.ageGroup} small /> <CategoryChip cat={setAllCat || p.category} small showRegular />
               </span>
               <button className="icon-btn sm" aria-label="Remove" onClick={() => setMembers((m) => m.filter((x) => x !== p.id))}>
                 <Icon name="x" size={16} />
@@ -426,6 +444,22 @@ function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }
           + Create a new person in this family
         </button>
       </div>
+      {members.length > 1 && (
+        <div className="field">
+          <span>Category for the whole family</span>
+          <div className="pill-row">
+            <button className={`pill ${setAllCat === '' ? 'on' : ''}`} onClick={() => setSetAllCat('')}>
+              Keep as is
+            </button>
+            {CATEGORIES.map((c) => (
+              <button key={c.id} className={`pill cat-${c.id} ${setAllCat === c.id ? 'on' : ''}`} onClick={() => setSetAllCat(c.id)}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+          {setAllCat && <span className="muted small">Everyone above will be set to this when you tap Save.</span>}
+        </div>
+      )}
       <label className="field">
         <span>Notes</span>
         <textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
