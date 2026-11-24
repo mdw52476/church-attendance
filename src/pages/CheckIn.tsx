@@ -33,7 +33,7 @@ const prefs = {
 };
 
 export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: string; onNavigate: (path: string) => void }) {
-  const { db, saveEvent, toast, saving } = useStore();
+  const { db, saveEvent, toast, saving, savePeople } = useStore();
   const types = useMemo(() => db.EventTypes.filter((t) => t.active).sort((a, b) => a.sortOrder - b.sortOrder), [db.EventTypes]);
 
   // ---- which event ----
@@ -170,6 +170,41 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
     }
     return m;
   }, [db.FamilyMembers]);
+
+  // Inactive people are hidden from check-in, but a search also finds them (shown separately at the
+  // bottom) so someone who comes back can be reactivated and checked in right here.
+  const inactiveMatches = useMemo(
+    () =>
+      q.trim()
+        ? db.People.filter((p) => p.status === 'inactive' && !checked.has(p.id) && matchesSearch(p, q)).sort((a, b) => sortKey(a, order).localeCompare(sortKey(b, order)))
+        : [],
+    [db.People, q, checked, order],
+  );
+
+  /** Inactive family members (including p) across p's families. */
+  const inactiveFamilyOf = (p: Person) => {
+    const famIds = familiesOf.get(p.id) ?? [];
+    const ids = new Set(db.FamilyMembers.filter((m) => famIds.includes(m.familyId)).map((m) => m.personId));
+    return db.People.filter((x) => ids.has(x.id) && x.status === 'inactive');
+  };
+
+  const reactivate = async (list: Person[], label: string) => {
+    try {
+      await savePeople(
+        list.map((x) => ({ ...x, status: 'active' as const })),
+        `Reactivated ${label} during check-in`,
+      );
+      setChecked((s) => {
+        const n = new Set(s);
+        list.forEach((x) => n.add(x.id));
+        return n;
+      });
+      setDirty(true);
+      toast(`${label} is active again and checked in`);
+    } catch {
+      /* error toast already shown */
+    }
+  };
 
   const membersOf = (familyId: string) =>
     db.FamilyMembers.filter((m) => m.familyId === familyId)
@@ -492,13 +527,53 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
       </button>
 
       {visible.length === 0 ? (
-        <Empty>{q ? `No one matches “${q}”.` : 'No people to show.'}</Empty>
+        inactiveMatches.length === 0 && <Empty>{q ? `No one matches “${q}”.` : 'No people to show.'}</Empty>
       ) : view === 'families' ? (
         renderFamilies()
       ) : view === 'sections' ? (
         renderSections()
       ) : (
         <ul className="people">{visible.map((p) => renderRow(p))}</ul>
+      )}
+
+      {inactiveMatches.length > 0 && (
+        <section className="fam-card inactive-matches">
+          <header>
+            <b>Inactive ({inactiveMatches.length})</b>
+            <span className="muted small">Not on the usual list</span>
+          </header>
+          <ul className="people">
+            {inactiveMatches.map((p) => {
+              const fam = inactiveFamilyOf(p);
+              const famName = (familiesOf.get(p.id) ?? []).map((id) => db.Families.find((f) => f.id === id)?.name).filter(Boolean)[0];
+              return (
+                <li key={p.id} className="person-row inactive-row">
+                  <div className="row-main static">
+                    <span className="who">
+                      <span className="nm">{displayName(p, order)}</span>
+                      <span className="tags">
+                        <AgeChip age={p.ageGroup} small />
+                        <CategoryChip cat={p.category} small />
+                        <span className="chip sm inactive">Inactive</span>
+                        {(p.firstName || p.lastName) && p.description && <span className="desc">{p.description}</span>}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="reactivate-actions">
+                    <button className="btn sm primary" onClick={() => reactivate([p], displayName(p))}>
+                      Make active &amp; check in
+                    </button>
+                    {fam.length > 1 && (
+                      <button className="btn sm" onClick={() => reactivate(fam, `The ${famName ?? p.lastName} family (${fam.length})`)}>
+                        Whole family ({fam.length})
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
 
       <div className="anon-card">
