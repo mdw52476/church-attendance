@@ -41,7 +41,8 @@ function PeopleList() {
 
   const list = useMemo(
     () =>
-      db.People.filter((p) => showInactive || p.status === 'active')
+      // normal list = active people; the Inactive filter switches to only the inactive ones
+      db.People.filter((p) => (showInactive ? p.status === 'inactive' : p.status === 'active'))
         .filter((p) => matchesSearch(p, q))
         .filter((p) => !ageF.length || ageF.includes(p.ageGroup))
         .filter((p) => !catF.length || catF.includes(p.category))
@@ -88,7 +89,7 @@ function PeopleList() {
             </FilterChip>
           ))}
           <FilterChip on={showInactive} onClick={() => setShowInactive((x) => !x)}>
-            Show inactive
+            Inactive only
           </FilterChip>
         </div>
         <div className="toolbar-row">
@@ -324,6 +325,7 @@ function FamilyList() {
                       {pa ? <span className="muted"> · {pa.firstName}</span> : null}
                     </span>
                     <span className="tags">
+                      {mem.length > 0 && mem.every((p) => p.status === 'inactive') && <span className="chip sm inactive">Inactive</span>}
                       <span className="desc">{mem.map((p) => p.firstName || displayName(p)).join(', ') || 'No members'}</span>
                     </span>
                   </span>
@@ -346,6 +348,7 @@ function FamilyList() {
 export function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }) {
   const { db, saveFamily, deleteFamily, savePeople, toast } = useStore();
   const [setAllCat, setSetAllCat] = useState<Category | ''>('');
+  const [setAllStatus, setSetAllStatus] = useState<Person['status'] | ''>('');
   const [editingMember, setEditingMember] = useState<Person | null>(null);
   const isNew = !db.Families.some((f) => f.id === family.id);
   const [f, setF] = useState(family);
@@ -364,14 +367,19 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
     // skip anyone deleted while this form was open
     const live = members.filter((id) => db.People.some((p) => p.id === id));
     await saveFamily({ ...f, name, primaryAdultId: live.includes(primary) ? primary : '' }, live);
-    if (setAllCat) {
-      const change = people(members).filter((p) => p.category !== setAllCat);
-      const label = CATEGORIES.find((c) => c.id === setAllCat)?.label ?? setAllCat;
+    if (setAllCat || setAllStatus) {
+      const change = people(live).filter((p) => (setAllCat && p.category !== setAllCat) || (setAllStatus && p.status !== setAllStatus));
+      const catLabel = setAllCat ? CATEGORIES.find((c) => c.id === setAllCat)?.label ?? setAllCat : '';
+      const what = [catLabel, setAllStatus === 'inactive' ? 'Inactive' : setAllStatus === 'active' ? 'Active' : ''].filter(Boolean).join(' and ');
       await savePeople(
-        change.map((p) => ({ ...p, category: setAllCat, categoryManual: true })),
-        `Set the ${name} family (${change.length}) to ${label}`,
+        change.map((p) => ({
+          ...p,
+          ...(setAllCat ? { category: setAllCat, categoryManual: true } : {}),
+          ...(setAllStatus ? { status: setAllStatus } : {}),
+        })),
+        `Set the ${name} family (${change.length}) to ${what}`,
       );
-      if (change.length) toast(`${name} family set to ${label}`);
+      if (change.length) toast(`${name} family set to ${what}`);
     }
     onClose();
   };
@@ -419,6 +427,7 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
             <li key={p.id}>
               <span>
                 {displayName(p)} <AgeChip age={p.ageGroup} small /> <CategoryChip cat={setAllCat || p.category} small showRegular />
+                {(setAllStatus || p.status) === 'inactive' && <span className="chip sm inactive">Inactive</span>}
               </span>
               <span className="member-actions">
                 <button className="btn sm ghost row-edit" aria-label={`Edit ${displayName(p)}`} onClick={() => setEditingMember(p)}>
@@ -467,6 +476,26 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
             ))}
           </div>
           {setAllCat && <span className="muted small">Everyone above will be set to this when you tap Save.</span>}
+        </div>
+      )}
+      {members.length > 0 && (
+        <div className="field">
+          <span>Status for the whole family</span>
+          <div className="pill-row">
+            <button className={`pill ${setAllStatus === '' ? 'on' : ''}`} onClick={() => setSetAllStatus('')}>
+              Keep as is
+            </button>
+            <button className={`pill ${setAllStatus === 'active' ? 'on' : ''}`} onClick={() => setSetAllStatus('active')}>
+              Active
+            </button>
+            <button className={`pill ${setAllStatus === 'inactive' ? 'on' : ''}`} onClick={() => setSetAllStatus('inactive')}>
+              Inactive
+            </button>
+          </div>
+          {setAllStatus === 'inactive' && (
+            <span className="muted small">Everyone above will be hidden from check-in when you tap Save. Their attendance history is kept.</span>
+          )}
+          {setAllStatus === 'active' && <span className="muted small">Everyone above will show on check-in again when you tap Save.</span>}
         </div>
       )}
       <label className="field">
