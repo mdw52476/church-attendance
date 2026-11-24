@@ -5,11 +5,12 @@ export interface AppConfig {
   googleClientId: string;
   spreadsheetId: string;
   churchName: string;
+  shortName: string;
 }
 
 const LS_KEY = 'ca.config';
 
-let fileConfig: AppConfig = { googleClientId: '', spreadsheetId: '', churchName: 'Church Attendance' };
+let fileConfig: AppConfig = { googleClientId: '', spreadsheetId: '', churchName: 'Church Attendance', shortName: '' };
 
 export async function loadConfig(): Promise<AppConfig> {
   try {
@@ -29,7 +30,7 @@ export function getConfig(): AppConfig {
     /* ignore */
   }
   const pick = (k: keyof AppConfig) => (local[k] && String(local[k]).trim()) || fileConfig[k];
-  return { googleClientId: pick('googleClientId'), spreadsheetId: pick('spreadsheetId'), churchName: pick('churchName') };
+  return { googleClientId: pick('googleClientId'), spreadsheetId: pick('spreadsheetId'), churchName: pick('churchName'), shortName: pick('shortName') };
 }
 
 export function saveLocalConfig(c: Partial<AppConfig>) {

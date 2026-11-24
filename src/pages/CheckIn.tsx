@@ -136,6 +136,9 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [famPick, setFamPick] = useState<Person | null>(null);
+  const [primaryOnly, setPrimaryOnly] = useState<boolean>(() => prefs.get('famPrimaryOnly', true));
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  useEffect(() => prefs.set('famPrimaryOnly', primaryOnly), [primaryOnly]);
 
   useEffect(() => prefs.set('order', order), [order]);
   useEffect(() => prefs.set('view', view), [view]);
@@ -287,6 +290,20 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
         {fams.map(({ f, mem }) => {
           const all = mem.every((p) => checked.has(p.id));
           const pa = db.People.find((p) => p.id === f.primaryAdultId);
+          const sorted = [...mem].sort((a, b) => sortKey(a, order).localeCompare(sortKey(b, order)));
+          // "Primary only": show the primary adult; the rest stay tucked away until the family is opened.
+          // Searching always shows the matching people.
+          const lead = sorted.find((p) => p.id === f.primaryAdultId) ?? sorted[0];
+          const collapsed = primaryOnly && !q.trim() && !expanded.has(f.id) && sorted.length > 1;
+          const shown = collapsed ? [lead] : [lead, ...sorted.filter((p) => p !== lead)];
+          const hidden = sorted.filter((p) => p !== lead);
+          const hiddenHere = hidden.filter((p) => checked.has(p.id)).length;
+          const toggleOpen = () =>
+            setExpanded((s) => {
+              const n = new Set(s);
+              n.has(f.id) ? n.delete(f.id) : n.add(f.id);
+              return n;
+            });
           return (
             <section key={f.id} className="fam-card">
               <header>
@@ -311,7 +328,24 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
                   {all ? 'Clear' : 'Check in all'}
                 </button>
               </header>
-              <ul className="people">{mem.sort((a, b) => sortKey(a, order).localeCompare(sortKey(b, order))).map((p) => renderRow(p, true))}</ul>
+              <ul className="people">
+                {shown.map((p) => renderRow(p, true))}
+                {primaryOnly && !q.trim() && hidden.length > 0 && (
+                  <li className="fam-more">
+                    <button onClick={toggleOpen} aria-expanded={!collapsed}>
+                      <Icon name={collapsed ? 'chevron' : 'back'} size={16} />
+                      {collapsed ? (
+                        <span>
+                          {hidden.length} more: {hidden.map((p) => p.firstName || displayName(p)).join(', ')}
+                          {hiddenHere > 0 && <b> · {hiddenHere} here</b>}
+                        </span>
+                      ) : (
+                        <span>Hide the rest of the family</span>
+                      )}
+                    </button>
+                  </li>
+                )}
+              </ul>
             </section>
           );
         })}
@@ -392,6 +426,17 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
           <FilterChip on={hereOnly} onClick={() => setHereOnly((x) => !x)}>
             Here ({checked.size})
           </FilterChip>
+          {view === 'families' && (
+            <FilterChip
+              on={primaryOnly}
+              onClick={() => {
+                setPrimaryOnly((x) => !x);
+                setExpanded(new Set());
+              }}
+            >
+              Primary only
+            </FilterChip>
+          )}
         </div>
         {filtersOpen && (
           <div className="filters">

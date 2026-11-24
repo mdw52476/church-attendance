@@ -1,6 +1,11 @@
 :root {
-  --brand: #1f3a5f;
-  --brand-2: #2b5a8f;
+  /* Forty Corners Church green. The logo itself is #6a8d7b; buttons and the header use a slightly
+     deeper shade of it so white text on them stays easy to read. */
+  --brand-logo: #6a8d7b;
+  --brand: #557767;
+  --brand-2: #4a6a5b;
+  --brand-soft: #e4ede8;
+  --topbar: #557767;
   --bg: #f4f5f7;
   --surface: #ffffff;
   --surface-2: #f8f9fb;
@@ -35,7 +40,7 @@
   --returning-soft: #dde8fc;
   --returning-ink: #1a4cae;
 
-  --chart-bar: #2b5a8f;
+  --chart-bar: #6a8d7b;
   --radius: 12px;
   --tabbar-h: 62px;
   --savebar-h: 64px;
@@ -45,8 +50,10 @@
 /* Dark colors apply when <html data-theme="dark">; src/theme.ts sets it from the user's choice
    (Automatic follows the phone's setting). */
 :root[data-theme='dark'] {
-    --brand: #8fb4e6;
-    --brand-2: #a9c6ee;
+    --brand: #9dc3b0;
+    --brand-2: #b3d3c3;
+    --brand-soft: #22332b;
+    --topbar: #2a3d34;
     --bg: #111418;
     --surface: #1a1e23;
     --surface-2: #20252b;
@@ -69,7 +76,7 @@
     --first-ink: #c8a6f5;
     --returning-soft: #1a2c4f;
     --returning-ink: #9dbcf5;
-    --chart-bar: #7fa8de;
+    --chart-bar: #8fb8a4;
     color-scheme: dark;
 }
 
@@ -261,18 +268,38 @@ input[type='checkbox'] {
   align-items: center;
   gap: 8px;
   height: 52px;
-  padding: 0 8px 0 16px;
-  background: var(--brand);
+  padding: 0 8px 0 12px;
+  background: var(--topbar);
   color: #fff;
 }
-:root[data-theme='dark'] .topbar {
-  background: #16273d;
+.topbar .brand-logo {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
 }
 .topbar .brand {
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.topbar .brand .short {
+  display: none;
+}
+@media (max-width: 360px) {
+  .topbar .brand .full {
+    display: none;
+  }
+  .topbar .brand .short {
+    display: inline;
+  }
+}
+.welcome-card .logo img {
+  width: 96px;
+  height: 96px;
 }
 .topbar .icon-btn {
   color: #fff;
@@ -368,7 +395,7 @@ main {
   margin: 0;
 }
 .card.notice {
-  background: var(--returning-soft);
+  background: var(--brand-soft);
   border-color: transparent;
   color: var(--text);
 }
@@ -749,6 +776,24 @@ ul.compact .row-main {
 .fam-card {
   margin-bottom: 12px;
 }
+.fam-more button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px 8px 20px;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--brand-2);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.fam-more button b {
+  color: var(--check);
+}
 .fam-card > header {
   display: flex;
   align-items: center;
@@ -980,7 +1025,7 @@ ul.compact .row-main {
 }
 .pill.on {
   border-color: var(--brand-2);
-  background: var(--returning-soft);
+  background: var(--brand-soft);
   color: var(--text);
 }
 .pill.age-adult.on {
@@ -1058,7 +1103,7 @@ ul.compact .row-main {
   overflow: hidden;
 }
 .list-buttons button.on {
-  background: var(--returning-soft);
+  background: var(--brand-soft);
 }
 ul.plain {
   list-style: none;

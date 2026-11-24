@@ -100,10 +100,7 @@ function Welcome(props: { config: AppConfig; onDemo: () => void; onSignedIn: (c:
 function Logo() {
   return (
     <div className="logo">
-      <svg viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
-        <rect width="100" height="100" rx="22" fill="var(--brand)" />
-        <path d="M44 18h12v22h22v12H56v30H44V52H22V40h22z" fill="#fff" />
-      </svg>
+      <img src="./logo.png" alt="" width="96" height="96" />
     </div>
   );
 }
@@ -295,7 +292,11 @@ function Shell({ config, onSignOut, onSwitchToReal }: { config: AppConfig; onSig
   return (
     <div className="app">
       <header className="topbar">
-        <span className="brand">{config.churchName}</span>
+        <img className="brand-logo" src="./logo.png" alt="" width="32" height="32" />
+        <span className="brand">
+          <span className="full">{config.churchName}</span>
+          <span className="short">{config.shortName || config.churchName}</span>
+        </span>
         {backend.kind === 'demo' && <span className="chip sm demo">Demo</span>}
         <span className="spacer" />
         {saving && <span className="saving">Saving…</span>}
