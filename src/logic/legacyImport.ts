@@ -160,7 +160,7 @@ function ageFromTag(tag: string, text: string): AgeGroup | null {
   return null;
 }
 
-const catRank: Record<Category, number> = { first_time: 0, returning: 1, regular: 2 };
+const catRank: Record<Category, number> = { first_time: 0, returning: 1, non_regular: 2, regular: 3 };
 
 // ---------- build ----------
 
@@ -217,12 +217,13 @@ export function buildLegacy(values: string[][], layout: LegacyLayout, opts: Lega
     const n = row.name;
     const key = n.named && n.last ? `${n.first} ${n.last}`.toLowerCase() : `__row${rowPerson.length}`;
     const visits = new Set(row.dates);
-    const isRegularSection = /^regular/i.test(row.section);
+    const isRegularSection = /^\W*regular/i.test(row.section) && !/non-?regular/i.test(row.section);
     const tag = row.tag.toLowerCase();
     let category: Category;
     if (/1st|first/.test(tag)) category = visits.size >= 2 ? 'returning' : 'first_time';
     else if (/return/.test(tag)) category = 'returning';
     else if (isRegularSection) category = 'regular';
+    else if (/non-?regular/i.test(row.section)) category = 'non_regular';
     else if (/guest/i.test(row.section) && !/return/i.test(row.section) && visits.size <= 1) category = 'first_time';
     else category = 'returning';
     // unnamed placeholders stay on the check-in list only when they're part of a regular family
@@ -353,7 +354,8 @@ export function buildLegacy(values: string[][], layout: LegacyLayout, opts: Lega
     const p = e.person;
     const keys = [...e.visits].filter((k) => eventIdByKey.has(k)).sort((a, b) => colDate.get(a)!.localeCompare(colDate.get(b)!));
     keys.forEach((k, i) => {
-      const cat: Category = p.category === 'regular' ? 'regular' : e.firstTimeTag && i === 0 ? 'first_time' : 'returning';
+      const cat: Category =
+        p.category === 'regular' || p.category === 'non_regular' ? p.category : e.firstTimeTag && i === 0 ? 'first_time' : 'returning';
       const name = p.firstName || p.lastName ? [p.firstName, p.lastName].filter(Boolean).join(' ') : p.description;
       attendance.push({
         id: uid('a'),

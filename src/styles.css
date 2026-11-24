@@ -39,6 +39,9 @@
   --returning: #2f6fdb;
   --returning-soft: #dde8fc;
   --returning-ink: #1a4cae;
+  --nonreg: #d9782b;
+  --nonreg-soft: #fbe7d6;
+  --nonreg-ink: #8a4410;
 
   --chart-bar: #6a8d7b;
   --radius: 12px;
@@ -76,6 +79,8 @@
     --first-ink: #c8a6f5;
     --returning-soft: #1a2c4f;
     --returning-ink: #9dbcf5;
+    --nonreg-soft: #3e2a17;
+    --nonreg-ink: #f2b47d;
     --chart-bar: #8fb8a4;
     color-scheme: dark;
 }
@@ -456,6 +461,10 @@ main {
   background: var(--first-soft);
   color: var(--first-ink);
 }
+.chip.cat-non_regular {
+  background: var(--nonreg-soft);
+  color: var(--nonreg-ink);
+}
 .chip.cat-returning {
   background: var(--returning-soft);
   color: var(--returning-ink);
@@ -584,6 +593,11 @@ main {
 .filter-chip.cat-first_time.on {
   background: var(--first);
   border-color: var(--first);
+  color: #fff;
+}
+.filter-chip.cat-non_regular.on {
+  background: var(--nonreg);
+  border-color: var(--nonreg);
   color: #fff;
 }
 .filter-chip.cat-returning.on {
@@ -1053,6 +1067,11 @@ ul.compact .row-main {
   border-color: var(--first);
   color: #fff;
 }
+.pill.cat-non_regular.on {
+  background: var(--nonreg);
+  border-color: var(--nonreg);
+  color: #fff;
+}
 .pill.cat-returning.on {
   background: var(--returning);
   border-color: var(--returning);
@@ -1345,6 +1364,9 @@ details summary {
 }
 .meter-fill.cat-first_time {
   background: var(--first);
+}
+.meter-fill.cat-non_regular {
+  background: var(--nonreg);
 }
 .meter-fill.cat-returning {
   background: var(--returning);

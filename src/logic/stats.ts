@@ -41,7 +41,7 @@ export function summarize(db: DB, events: ChurchEvent[]): Summary {
   const uniq = new Set(rows.map((a) => a.personId));
   const mk = () => ({ count: 0, unique: 0 });
   const byAge = { adult: mk(), youth: mk(), kids: mk(), infant: mk() } as Summary['byAge'];
-  const byCat = { regular: mk(), returning: mk(), first_time: mk() } as Summary['byCat'];
+  const byCat = { regular: mk(), non_regular: mk(), returning: mk(), first_time: mk() } as Summary['byCat'];
   const bySection: Summary['bySection'] = { '1': mk(), '2': mk(), '3': mk(), '4': mk(), '': mk() };
   const seenAge = new Map<string, Set<string>>();
   const seenCat = new Map<string, Set<string>>();

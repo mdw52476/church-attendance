@@ -60,9 +60,10 @@ export const REGULAR_AFTER_MONTHS = 6;
  *   1 visit                         → First-time guest
  *   2+ visits                       → Returning guest
  *   attending 6+ months after first → Regular
+ * Regular and Non-regular are set by people and never changed automatically.
  */
 export function computeCategory(p: Person, visitDates: string[]): Category {
-  if (p.categoryManual || p.category === 'regular') return p.category;
+  if (p.categoryManual || p.category === 'regular' || p.category === 'non_regular') return p.category;
   if (visitDates.length === 0) return p.category;
   const sorted = [...visitDates].sort();
   const first = p.firstVisit && p.firstVisit < sorted[0] ? p.firstVisit : sorted[0];

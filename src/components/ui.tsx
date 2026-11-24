@@ -8,7 +8,7 @@ export function AgeChip({ age, small }: { age: AgeGroup; small?: boolean }) {
 
 export function CategoryChip({ cat, small, showRegular }: { cat: Category; small?: boolean; showRegular?: boolean }) {
   if (cat === 'regular' && !showRegular) return null;
-  const label = cat === 'first_time' ? 'First-time' : cat === 'returning' ? 'Returning' : 'Regular';
+  const label = cat === 'first_time' ? 'First-time' : cat === 'returning' ? 'Returning' : cat === 'non_regular' ? 'Non-regular' : 'Regular';
   return <span className={`chip cat-${cat} ${small ? 'sm' : ''}`}>{label}</span>;
 }
 

@@ -292,6 +292,7 @@ function toCat(v: string): Category | null {
   const s = v.toLowerCase();
   if (/first/.test(s)) return 'first_time';
   if (/return/.test(s)) return 'returning';
+  if (/non-?\s?regular|irregular|occasional/.test(s)) return 'non_regular';
   if (/regular|member|attend/.test(s)) return 'regular';
   if (/guest|visitor/.test(s)) return 'returning';
   return null;
@@ -487,6 +488,7 @@ function ImportCsv({ onClose }: { onClose: () => void }) {
               <select value={defaultCat} onChange={(e) => setDefaultCat(e.target.value as Category)}>
                 <option value="regular">Regular attendee</option>
                 <option value="returning">Returning guest</option>
+                <option value="non_regular">Non-regular</option>
                 <option value="first_time">First-time guest</option>
               </select>
             </label>

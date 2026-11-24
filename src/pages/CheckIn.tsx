@@ -141,7 +141,11 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
   useEffect(() => prefs.set('famPrimaryOnly', primaryOnly), [primaryOnly]);
 
   useEffect(() => prefs.set('order', order), [order]);
-  useEffect(() => prefs.set('view', view), [view]);
+  useEffect(() => {
+    prefs.set('view', view);
+    // section buttons only show in the Sections view, so don't leave a hidden section filter on
+    if (view !== 'sections') setSecF([]);
+  }, [view]);
 
   const youthOnly = type?.audience === 'youth' && !showAll;
 
@@ -192,7 +196,7 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
 
   // ---- save ----
   const counts = useMemo(() => {
-    const c = { total: checked.size, adult: 0, youth: 0, kids: 0, infant: 0, first_time: 0, returning: 0 };
+    const c = { total: checked.size, adult: 0, youth: 0, kids: 0, infant: 0, first_time: 0, returning: 0, non_regular: 0 };
     for (const id of checked) {
       const p = db.People.find((x) => x.id === id);
       if (!p) continue;
@@ -418,11 +422,12 @@ export function CheckIn({ eventId: routeEventId, onNavigate }: { eventId?: strin
           </button>
         </div>
         <div className="chip-scroll">
-          {SECTIONS.map((s) => (
-            <FilterChip key={s} on={secF.includes(s)} onClick={() => setSecF((x) => (x.includes(s) ? x.filter((y) => y !== s) : [...x, s]))}>
-              Sec {s}
-            </FilterChip>
-          ))}
+          {view === 'sections' &&
+            SECTIONS.map((s) => (
+              <FilterChip key={s} on={secF.includes(s)} onClick={() => setSecF((x) => (x.includes(s) ? x.filter((y) => y !== s) : [...x, s]))}>
+                Sec {s}
+              </FilterChip>
+            ))}
           <FilterChip on={hereOnly} onClick={() => setHereOnly((x) => !x)}>
             Here ({checked.size})
           </FilterChip>

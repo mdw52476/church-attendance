@@ -1,4 +1,4 @@
-export type Category = 'regular' | 'first_time' | 'returning';
+export type Category = 'regular' | 'non_regular' | 'first_time' | 'returning';
 export type AgeGroup = 'adult' | 'youth' | 'kids' | 'infant';
 export type FollowUp = '' | 'needed' | 'contacted' | 'done';
 
@@ -106,6 +106,7 @@ export const AGE_GROUPS: { id: AgeGroup; label: string }[] = [
 
 export const CATEGORIES: { id: Category; label: string }[] = [
   { id: 'regular', label: 'Regular' },
+  { id: 'non_regular', label: 'Non-regular' },
   { id: 'returning', label: 'Returning guest' },
   { id: 'first_time', label: 'First-time guest' },
 ];

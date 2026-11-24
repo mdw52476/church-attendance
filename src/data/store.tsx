@@ -59,7 +59,7 @@ function parseDb(raw: Record<TableName, Record<string, string>[]>): DB {
 function normalizePerson(p: Person): Person {
   return {
     ...p,
-    category: (['regular', 'first_time', 'returning'].includes(p.category) ? p.category : 'regular') as Person['category'],
+    category: (['regular', 'non_regular', 'first_time', 'returning'].includes(p.category) ? p.category : 'regular') as Person['category'],
     ageGroup: (['adult', 'youth', 'kids', 'infant'].includes(p.ageGroup) ? p.ageGroup : 'adult') as Person['ageGroup'],
     status: p.status === 'inactive' ? 'inactive' : 'active',
   };
@@ -262,7 +262,7 @@ export function StoreProvider({ backend, children }: { backend: Backend; childre
       // first-time guests need follow-up
       for (const a of added) {
         const p = cm.get(a.personId) ?? people.get(a.personId);
-        if (p && p.category !== 'regular' && !p.followUp) cm.set(p.id, { ...p, followUp: 'needed', updatedAt: nowIso() });
+        if (p && (p.category === 'first_time' || p.category === 'returning') && !p.followUp) cm.set(p.id, { ...p, followUp: 'needed', updatedAt: nowIso() });
       }
       setDb((d) => ({ ...d, Events: events, Attendance: attendance, People: d.People.map((p) => cm.get(p.id) ?? p) }));
       const details = isNew

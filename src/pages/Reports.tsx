@@ -148,7 +148,7 @@ function Overview({ events }: { events: ReturnType<typeof filterEvents> }) {
     downloadFile(
       `attendance-summary-${todayStr()}.csv`,
       toCsv([
-        ['Date', 'Event', 'Named', 'Anonymous', 'Total', 'Adult', 'Youth', 'Kids', 'Infant', 'First-time', 'Returning', 'Regular', 'Sec 1', 'Sec 2', 'Sec 3', 'Sec 4'],
+        ['Date', 'Event', 'Named', 'Anonymous', 'Total', 'Adult', 'Youth', 'Kids', 'Infant', 'First-time', 'Returning', 'Non-regular', 'Regular', 'Sec 1', 'Sec 2', 'Sec 3', 'Sec 4'],
         ...events.map((e) => {
           const rows = byEv.get(e.id) ?? [];
           const c = (f: (a: (typeof rows)[number]) => boolean) => rows.filter(f).length;
@@ -164,6 +164,7 @@ function Overview({ events }: { events: ReturnType<typeof filterEvents> }) {
             c((a) => a.ageGroup === 'infant'),
             c((a) => a.category === 'first_time'),
             c((a) => a.category === 'returning'),
+            c((a) => a.category === 'non_regular'),
             c((a) => a.category === 'regular'),
             ...SECTIONS.map((sec) => c((a) => a.section === sec)),
           ];
@@ -298,7 +299,7 @@ function Overview({ events }: { events: ReturnType<typeof filterEvents> }) {
                         {rows.filter((r) => r.ageGroup === a.id).length}
                       </td>
                     ))}
-                    <td className="num">{rows.filter((r) => r.category !== 'regular').length}</td>
+                    <td className="num">{rows.filter((r) => r.category === 'first_time' || r.category === 'returning').length}</td>
                   </tr>
                 );
               })}
