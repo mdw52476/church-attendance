@@ -346,6 +346,7 @@ function FamilyList() {
 export function FamilyForm({ family, onClose }: { family: Family; onClose: () => void }) {
   const { db, saveFamily, deleteFamily, savePeople, toast } = useStore();
   const [setAllCat, setSetAllCat] = useState<Category | ''>('');
+  const [editingMember, setEditingMember] = useState<Person | null>(null);
   const isNew = !db.Families.some((f) => f.id === family.id);
   const [f, setF] = useState(family);
   const [members, setMembers] = useState<string[]>(() => db.FamilyMembers.filter((m) => m.familyId === family.id).map((m) => m.personId));
@@ -360,7 +361,9 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
     let name = f.name.trim();
     if (!name) name = people(members)[0]?.lastName || 'Family';
     const primary = f.primaryAdultId && members.includes(f.primaryAdultId) ? f.primaryAdultId : adults[0]?.id ?? '';
-    await saveFamily({ ...f, name, primaryAdultId: primary }, members);
+    // skip anyone deleted while this form was open
+    const live = members.filter((id) => db.People.some((p) => p.id === id));
+    await saveFamily({ ...f, name, primaryAdultId: live.includes(primary) ? primary : '' }, live);
     if (setAllCat) {
       const change = people(members).filter((p) => p.category !== setAllCat);
       const label = CATEGORIES.find((c) => c.id === setAllCat)?.label ?? setAllCat;
@@ -417,9 +420,15 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
               <span>
                 {displayName(p)} <AgeChip age={p.ageGroup} small /> <CategoryChip cat={setAllCat || p.category} small showRegular />
               </span>
-              <button className="icon-btn sm" aria-label="Remove" onClick={() => setMembers((m) => m.filter((x) => x !== p.id))}>
-                <Icon name="x" size={16} />
-              </button>
+              <span className="member-actions">
+                <button className="btn sm ghost row-edit" aria-label={`Edit ${displayName(p)}`} onClick={() => setEditingMember(p)}>
+                  <Icon name="edit" size={18} />
+                  <span className="lbl">Edit</span>
+                </button>
+                <button className="icon-btn sm" aria-label={`Remove ${displayName(p)} from family`} title="Remove from family" onClick={() => setMembers((m) => m.filter((x) => x !== p.id))}>
+                  <Icon name="x" size={16} />
+                </button>
+              </span>
             </li>
           ))}
         </ul>
@@ -464,6 +473,12 @@ export function FamilyForm({ family, onClose }: { family: Family; onClose: () =>
         <span>Notes</span>
         <textarea rows={2} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
       </label>
+      {editingMember && (
+        <PersonForm
+          person={db.People.find((x) => x.id === editingMember.id) ?? editingMember}
+          onClose={() => setEditingMember(null)}
+        />
+      )}
       {adding && (
         <PersonForm
           title="New family member"

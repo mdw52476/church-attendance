@@ -1161,7 +1161,13 @@ ul.members li {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--line);
+}
+.member-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
 }
 ul.log li {
   border-bottom: 1px solid var(--line);
